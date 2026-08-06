@@ -65,6 +65,16 @@
     var delta = patch.scoreDelta || 0;
     return board().then(function (all) {
       var cur = (all && all[key]) || {};
+      var deviceId = profile.deviceId;
+      var players = cur.players || {};
+      var p = players[deviceId] || { player: profile.playerName || "anonymous", score: 0, correct: 0, attempts: 0, solved: {}, lastActionTs: 0 };
+      p.player = profile.playerName || "anonymous";
+      p.score = (p.score || 0) + delta;
+      if (delta > 0) p.correct = (p.correct || 0) + 1;
+      p.attempts = (p.attempts || 0) + 1;
+      if (patch.solved) p.solved = Object.assign({}, p.solved, patch.solved);
+      p.lastActionTs = now;
+      players[deviceId] = p;
       var doc = {
         teamKey: key,
         team: profile.teamName,
@@ -77,7 +87,8 @@
         solved: Object.assign({}, cur.solved || {}, patch.solved || {}),
         history: (cur.history || []).concat(delta ? [{ ts: now, delta: delta }] : []).slice(-200),
         updatedBy: profile.deviceId,
-        heartbeatTs: now
+        heartbeatTs: now,
+        players: players
       };
       if (patch.score !== undefined) doc.score = patch.score;
       return post("upsert", doc).then(function () { return doc; });
