@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triage or Treat</title>
+<style>
+:root {
+  --bg: #0b0f14;
+  --panel: #111822;
+  --panel2: #0e141d;
+  --border: #1e2a3a;
+  --text: #d7e2ee;
+  --dim: #7d8ea3;
+  --cyan: #38e1ff;
+  --green: #3ddc84;
+  --amber: #ffb454;
+  --red: #ff5c6c;
+  --purple: #a78bfa;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+  padding: 24px 16px 40px;
+}
+.wrap { max-width: 980px; margin: 0 auto; }
+
+/* header */
+.hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.game-title {
+  font-size: 1.9rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+  background: linear-gradient(90deg, var(--cyan), var(--purple));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.subtitle { color: var(--dim); font-size: .85rem; margin-top: 6px; letter-spacing: .04em; }
+.scoreBar { display: flex; gap: 18px; align-items: center; }
+.stat { text-align: right; }
+.stat .label { font-size: .68rem; text-transform: uppercase; letter-spacing: .12em; color: var(--dim); }
+.stat .value { font-family: var(--mono); font-size: 1.35rem; font-weight: 700; }
+.stat .value.green { color: var(--green); }
+.progressWrap { width: 220px; }
+.progressBar { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.progressBar > div { height: 100%; width: 0%; background: linear-gradient(90deg, var(--cyan), var(--green)); transition: width .4s ease; }
+#progressText { font-size: .72rem; color: var(--dim); margin-top: 6px; font-family: var(--mono); }
+
+/* tabs */
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.tab {
+  padding: 9px 22px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--panel2); color: var(--dim); font-weight: 600; cursor: pointer;
+  font-size: .85rem; letter-spacing: .06em; text-transform: uppercase;
+}
+.tab.active { background: rgba(56,225,255,.12); border-color: var(--cyan); color: var(--cyan); }
+
+/* layout */
+.layout { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.card + .card { margin-top: 16px; }
+
+.sectionTitle { font-size: .72rem; text-transform: uppercase; letter-spacing: .14em; color: var(--dim); margin-bottom: 12px; }
+
+.roundBadge { display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .08em; padding: 3px 10px; border-radius: 99px; margin-bottom: 8px; }
+.threat-CRITICAL { background: rgba(255,92,108,.15); color: var(--red); }
+.threat-HIGH { background: rgba(255,180,84,.15); color: var(--amber); }
+.threat-MEDIUM { background: rgba(56,225,255,.12); color: var(--cyan); }
+.threat-LOW { background: rgba(61,220,132,.12); color: var(--green); }
+
+h2.roundTitle { font-size: 1.15rem; margin-bottom: 10px; }
+.scenario { font-size: .92rem; line-height: 1.55; color: #b9c8d8; }
+.scenario code, .codebox code { font-family: var(--mono); background: rgba(56,225,255,.08); color: var(--cyan); padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+.scenario b { color: var(--text); }
+
+.codebox {
+  font-family: var(--mono); font-size: .85rem; background: #0a0f16; border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px; color: var(--text); white-space: pre-wrap; word-break: break-all;
+  line-height: 1.6; min-height: 44px;
+}
+.codebox .slot { color: var(--amber); font-weight: 700; }
+.codebox .pipe { color: var(--purple); }
+.codebox.ok { border-color: var(--green); color: var(--green); }
+.codebox.bad { border-color: var(--red); }
+
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: .75rem; color: var(--dim); margin-bottom: 5px; }
+.field input {
+  width: 100%; background: #0a0f16; border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: var(--mono); font-size: .9rem; padding: 10px 12px; outline: none;
+}
+.field input:focus { border-color: var(--cyan); }
+
+.btnRow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.btn {
+  padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer;
+  font-weight: 700; font-size: .83rem; letter-spacing: .04em; background: var(--panel2); color: var(--text);
+  transition: all .15s ease;
+}
+.btn:hover { border-color: var(--cyan); }
+.btn.primary { background: var(--cyan); color: #04121a; border-color: var(--cyan); }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.ghost { color: var(--dim); }
+.btn.warn { color: var(--amber); border-color: rgba(255,180,84,.4); }
+.btn.bad { color: var(--red); border-color: rgba(255,92,108,.4); }
+
+/* multiple-choice actions */
+.actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.action {
+  text-align: left; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; cursor: pointer; transition: border-color .15s ease; color: var(--text);
+  font-family: inherit; font-size: .9rem;
+}
+.action:hover:not(:disabled) { border-color: var(--cyan); }
+.action .act-title { font-weight: 700; font-size: .93rem; }
+.action .act-desc { color: var(--dim); font-size: .8rem; margin-top: 4px; line-height: 1.45; }
+.action.correct { border-color: var(--green); background: rgba(61,220,132,.08); }
+.action.wrong { border-color: var(--red); background: rgba(255,92,108,.08); }
+.action:disabled { cursor: default; }
+
+.feedback { margin-top: 14px; border-radius: 10px; padding: 14px; font-size: .88rem; line-height: 1.55; display: none; border: 1px solid; }
+.feedback.ok { display: block; background: rgba(61,220,132,.08); border-color: var(--green); color: #b9eccd; }
+.feedback.bad { display: block; background: rgba(255,92,108,.08); border-color: var(--red); color: #f3c2c8; }
+.feedback .expected { margin-top: 8px; font-family: var(--mono); font-size: .8rem; background: rgba(0,0,0,.35); padding: 8px 10px; border-radius: 6px; }
+.feedback .ref { margin-top: 8px; font-size: .78rem; color: var(--dim); }
+
+/* round chips */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.chip {
+  font-family: var(--mono); font-size: .72rem; padding: 5px 12px; border-radius: 99px;
+  border: 1px solid var(--border); color: var(--dim); cursor: pointer; background: var(--panel2);
+}
+.chip:hover { border-color: var(--cyan); }
+.chip.current { border-color: var(--cyan); color: var(--cyan); }
+.chip.done { border-color: var(--green); color: var(--green); background: rgba(61,220,132,.08); }
+.chip.tab-label { cursor: default; color: var(--dim); border: none; font-family: inherit; letter-spacing: .1em; text-transform: uppercase; font-size: .68rem; padding: 6px 4px; }
+.chip.tab-label.module { color: var(--purple); }
+
+/* completion overlay */
+.overlay {
+  position: fixed; inset: 0; background: rgba(4,8,12,.92); display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px;
+}
+.overlay.show { display: flex; }
+.finish-card { max-width: 460px; text-align: center; }
+.finish-card .big { font-size: 3rem; margin-bottom: 10px; }
+.finish-card h2 { font-size: 1.6rem; margin-bottom: 8px; color: var(--cyan); letter-spacing: .06em; }
+.finish-card p { color: var(--dim); line-height: 1.6; margin-bottom: 18px; }
+.footer { margin-top: 26px; text-align: center; color: var(--dim); font-size: .75rem; letter-spacing: .08em; }
+.footer b { color: var(--cyan); }
+
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div>
+      <div class="game-title">Triage or Treat</div>
+      <div class="subtitle">NTU PACE · AI-Powered SecOps · Alert triage — true positive, false positive, or escalate?</div>
+    </div>
+    <div class="scoreBar">
+      <div class="stat">
+        <div class="label">Score</div>
+        <div class="value green" id="scoreNum">0</div>
+      </div>
+      <div class="progressWrap">
+        <div class="progressBar"><div id="progressBar"></div></div>
+        <div id="progressText">0 / 0 decisions</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- left: scenario -->
+    <div>
+      <div class="card">
+        <div class="sectionTitle" id="moduleLabel">Module</div>
+        <span class="roundBadge" id="threatBadge">HIGH</span>
+        <h2 class="roundTitle" id="roundTitle">—</h2>
+        <p class="scenario" id="scenarioBody">—</p>
+      </div>
+    </div>
+
+    <!-- right: decision -->
+    <div>
+      <div class="card">
+        <div class="sectionTitle" id="panelTitle">Your call</div>
+        <div class="actions" id="actions"></div>
+        <div class="btnRow">
+          <button class="btn primary" id="nextBtn" style="display:none">Next scenario →</button>
+        </div>
+        <div class="feedback" id="feedback"></div>
+      </div>
+
+      <div class="chips" id="chips"></div>
+    </div>
+  </div>
+
+  <div class="footer">TRIAGE OR TREAT · PACE Module 2 · based on Lecture 4 IR content & BOTSv3 dataset</div>
+</div>
+
+<!-- completion overlay -->
+<div class="overlay" id="overlay">
+  <div class="card finish-card">
+    <div class="big" id="finishEmoji">🕵️</div>
+    <h2 id="finishTitle">Complete</h2>
+    <p id="finishBody">—</p>
+    <button class="btn primary" onclick="restartGame()">Play again</button>
+  </div>
+</div>
+
+<script>
+const GAME_DATA = {
+ "type": "multiple-choice",
+ "title": "Triage or Treat",
+ "subtitle": "NTU PACE · AI-Powered SecOps · Alert triage — true positive, false positive, or escalate?",
+ "footer": "TRIAGE OR TREAT · PACE Module 2 · based on Lecture 4 IR content & BOTSv3 dataset",
+ "modules": [
+  {
+   "id": "auth",
+   "title": "Authentication & Access",
+   "icon": "🔑",
+   "desc": "Login anomalies, brute force, MFA attacks",
+   "scenarios": [
+    {
+     "id": "a1",
+     "title": "The Brute Force",
+     "threat": "HIGH",
+     "body": "Your SIEM flags a spike in <code>linux_secure<\/code> \"Failed password\" events: <b>4,000 failures in 15 minutes<\/b>, all from <code>203.0.113.77<\/code>, targeting one admin account. No successful login yet. What's your triage call?\n",
+     "actions": [
+      {
+       "title": "True positive — block the source, alert the account owner",
+       "desc": "Treat as active brute force: block the IP at the firewall, check for other targets, notify the admin.",
+       "correct": true,
+       "explanation": "This is the textbook brute force: volume, single source, single target. Blocking the source and alerting the account owner is the correct first response. Escalate per SLA — this is a P1/P2 depending on your policy.\n",
+       "ref": "Lecture 4 — Brute Force Triage lab"
+      },
+      {
+       "title": "False positive — likely a misconfigured monitoring script",
+       "desc": "Ignore it; monitoring tools often generate repeated failed-auth noise.",
+       "correct": false,
+       "explanation": "4,000 failures in 15 minutes against a single admin account is not monitoring noise — monitoring scripts rarely hammer one account. Dismissing it as a false positive without evidence is the classic triage failure mode.\n",
+       "ref": "Lecture 4 — Decision tree: volume + single target"
+      },
+      {
+       "title": "Escalate immediately as confirmed compromise",
+       "desc": "Assume the account is already owned and start containment.",
+       "correct": false,
+       "explanation": "No successful login has occurred yet — escalation to 'confirmed compromise' overstates the evidence. Escalate the alert, yes; declare the account owned, no. Match your response to the evidence level.\n",
+       "ref": "NIST SP 800-61 — evidence-based classification"
+      }
+     ]
+    },
+    {
+     "id": "a2",
+     "title": "The Cloud Login Anomaly",
+     "threat": "HIGH",
+     "body": "AWS CloudTrail shows a console login to your production account from a <b>new IP in a country you don't operate in<\/b>, at 03:12 local time, using a service account. The login succeeded. What's your call?\n",
+     "actions": [
+      {
+       "title": "True positive — disable the key, revoke sessions, investigate",
+       "desc": "Assume the service account is compromised: disable credentials, revoke active sessions, review recent API calls.",
+       "correct": true,
+       "explanation": "A successful login from an unexpected geography on a privileged account is a high-confidence finding. The correct first action is credential revocation, not just observation. This is your Cloud Login Anomaly lab scenario.\n",
+       "ref": "Lecture 4 — Cloud Login Anomaly lab"
+      },
+      {
+       "title": "False positive — staff often travel; check the HR calendar first",
+       "desc": "Wait for confirmation the login was legitimate before acting.",
+       "correct": false,
+       "explanation": "For a service account, 'staff travel' doesn't apply — service accounts have no human to travel. And while you wait, an attacker keeps access. Verify, but act first: revoke, then confirm legitimacy.\n",
+       "ref": "Lecture 4 — service accounts vs human accounts"
+      },
+      {
+       "title": "Escalate to senior management as a data breach",
+       "desc": "A successful foreign login means your production data is already stolen.",
+       "correct": false,
+       "explanation": "A successful login is an incident, not yet a breach — you don't know what the account did. Contain first (revoke), investigate second, and only then determine breach scope. Jumping to 'data stolen' poisons the investigation.\n",
+       "ref": "NIST SP 800-61 — containment before declaration"
+      }
+     ]
+    },
+    {
+     "id": "a3",
+     "title": "MFA Fatigue",
+     "threat": "MEDIUM",
+     "body": "Your SOC sees <b>30+ MFA push notifications<\/b> accepted in under an hour for one user, each followed by a fresh login. The user says they 'kept tapping approve to make the pop-ups stop'. What's the call?\n",
+     "actions": [
+      {
+       "title": "True positive — treat as MFA fatigue attack, force re-auth",
+       "desc": "Revoke the session, force a password reset and re-enrollment, and investigate logins tied to those approvals.",
+       "correct": true,
+       "explanation": "This is the classic MFA fatigue / push-spam attack: the attacker spams pushes until the user approves. Each accepted push is a potential attacker login. Force re-auth and review the session timeline.\n",
+       "ref": "Lecture 4 — Authentication incident handling"
+      },
+      {
+       "title": "False positive — the user confirmed it was them tapping",
+       "desc": "The user's explanation closes the case; no further action needed.",
+       "correct": false,
+       "explanation": "The user's explanation is exactly what a MFA fatigue victim says — and what a successful attacker relies on. The volume pattern (30+ pushes) is the anomaly. User self-report alone never closes a fatigue case.\n",
+       "ref": "Lecture 4 — human factors in triage"
+      },
+      {
+       "title": "Block the user's account permanently",
+       "desc": "An account that approves spam pushes is a liability; disable it.",
+       "correct": false,
+       "explanation": "Over-response: the account was likely compromised, not malicious. Permanent disable destroys the investigation trail and punishes the victim. Contain temporarily, investigate, then restore with controls.\n",
+       "ref": "Lecture 4 — proportional response"
+      }
+     ]
+    },
+    {
+     "id": "a4",
+     "title": "Impossible Travel",
+     "threat": "MEDIUM",
+     "body": "Two successful logins, <b>5 minutes apart<\/b>: one from Singapore, one from the United States, same user, both with valid MFA. The user insists they're in Singapore. What's the call?\n",
+     "actions": [
+      {
+       "title": "Investigate the session metadata before declaring",
+       "desc": "Check for VPN egress, relay/proxy chains, or shared gateways that explain the geography jump.",
+       "correct": true,
+       "explanation": "Impossible travel is frequently explained by VPN egress, load-balanced relays, or cloud egress IPs — the 'impossible' part is the travel, not the login. Metadata review (source, ASN, known egress) decides true vs false positive.\n",
+       "ref": "Lecture 4 — decision tree: impossible travel branch"
+      },
+      {
+       "title": "True positive — the US login is an attacker",
+       "desc": "Two geographies in 5 minutes cannot both be the user; revoke everything.",
+       "correct": false,
+       "explanation": "Too fast: many legitimate architectures break geographic assumptions (corporate VPN in the US, user in Singapore). Without checking egress metadata you'd lock out a legitimate user and burn the SOC's credibility.\n",
+       "ref": "Lecture 4 — geo fields vs egress reality"
+      },
+      {
+       "title": "False positive — geolocation is always unreliable",
+       "desc": "IP geolocation is notoriously wrong, so dismiss the alert.",
+       "correct": false,
+       "explanation": "'Geolocation is unreliable' is a reason to verify, not to dismiss. A 10,000 km jump in 5 minutes deserves the 2 minutes it takes to check the metadata. Dismissing the whole signal class is triage laziness.\n",
+       "ref": "Lecture 4 — evidence quality assessment"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "malware",
+   "title": "Malware & C2",
+   "icon": "🦠",
+   "desc": "Beacons, phishing, privilege escalation, miners",
+   "scenarios": [
+    {
+     "id": "b1",
+     "title": "The Beacon",
+     "threat": "HIGH",
+     "body": "Your firewall logs show an internal host making an outbound TCP connection to a <b>known C2 address every 60 seconds, on the dot<\/b>, for the past 3 days. Each connection transfers ~2 KB. What's the call?\n",
+     "actions": [
+      {
+       "title": "True positive — isolate the host and preserve the box",
+       "desc": "Treat as C2 beaconing: isolate the host from the network, snapshot memory and disk, then investigate the infection vector.",
+       "correct": true,
+       "explanation": "Periodic outbound connections with small, regular payload sizes are the signature of command-and-control beaconing. Isolate and preserve — the box is your evidence. This mirrors your C2 Malware Analysis lab.\n",
+       "ref": "Lecture 4 — C2 Malware Analysis lab"
+      },
+      {
+       "title": "False positive — it's a scheduled job or heartbeat",
+       "desc": "Regular connections to the same host could be a legitimate heartbeat or telemetry.",
+       "correct": false,
+       "explanation": "A heartbeat to a KNOWN C2 address (on your threat feed) is not a false positive — the destination is flagged, full stop. The regularity is the beacon behavior; the destination is the verdict.\n",
+       "ref": "Lecture 4 — enrichment with threat feeds"
+      },
+      {
+       "title": "Watch and wait — collect more evidence for 48 hours",
+       "desc": "Passive monitoring avoids tipping off the attacker before you understand the scope.",
+       "correct": false,
+       "explanation": "You already have 3 days of beacon data — enough evidence. Waiting 48 more hours extends attacker dwell time and risks lateral movement. Contain now, correlate afterwards.\n",
+       "ref": "Lecture 4 — dwell time and response speed"
+      }
+     ]
+    },
+    {
+     "id": "b2",
+     "title": "The Phish",
+     "threat": "HIGH",
+     "body": "A user forwards an email to the SOC: it claims to be from your HR portal with an urgent 'salary review' link. The link resolves to <code>hr-portal-login.secure-update.xyz<\/code>. One colleague already clicked. What's the call?\n",
+     "actions": [
+      {
+       "title": "True positive — block the domain, reset affected credentials",
+       "desc": "Block the domain at the filter/proxy, check message traces for all recipients, and reset credentials for anyone who clicked.",
+       "correct": true,
+       "explanation": "A lookalike domain with an urgency hook is a credential phish. Domain blocking + message-trace review + credential reset for clickers is the standard containment set. This is your Email Forensics (O365) lab territory.\n",
+       "ref": "Lecture 4 — Email Forensics (O365) lab"
+      },
+      {
+       "title": "False positive — the user was suspicious and reported it",
+       "desc": "The user's report shows awareness; the email caused no harm, so close it.",
+       "correct": false,
+       "explanation": "The user reporting is good, but 'no harm yet' ignores that a colleague already clicked. One click on a credential phish is one potential account takeover — the campaign needs containment regardless.\n",
+       "ref": "Lecture 4 — phishing campaign handling"
+      },
+      {
+       "title": "Escalate straight to law enforcement",
+       "desc": "A phishing domain targeting your company is a criminal matter; hand it over.",
+       "correct": false,
+       "explanation": "Law enforcement is downstream, not first response. Your job first is containment (block, reset, trace) — without it, the phish keeps landing while you wait for the report to be filed.\n",
+       "ref": "Lecture 4 — escalation path order"
+      }
+     ]
+    },
+    {
+     "id": "b3",
+     "title": "The Privilege Escalation",
+     "threat": "CRITICAL",
+     "body": "Sysmon shows a Linux web server executing a <b>SUID-root binary you've never seen<\/b> (<code>/tmp/update-cache<\/code>) followed by <code>bash -p<\/code> spawning a reverse shell to an external IP. What's the call?\n",
+     "actions": [
+      {
+       "title": "True positive — isolate the host, capture the process tree",
+       "desc": "Contain the box immediately, preserve the process/memory evidence, and trace the web application compromise that dropped the binary.",
+       "correct": true,
+       "explanation": "SUID binary + bash -p + reverse shell is a textbook local privilege escalation into a root shell. The host is owned. Isolate, preserve, then trace the initial webapp foothold. This is your Linux PrivEsc lab.\n",
+       "ref": "Lecture 4 — Linux PrivEsc lab"
+      },
+      {
+       "title": "False positive — /tmp files are often staging areas for patches",
+       "desc": "A binary in /tmp executing with SUID could be a poorly-written patching tool.",
+       "correct": false,
+       "explanation": "A patching tool does not drop to a root shell and connect to an EXTERNAL IP. The reverse shell is the tell — there is no benign reading of 'SUID + bash -p + outbound shell'.\n",
+       "ref": "Lecture 4 — Sysmon event correlation"
+      },
+      {
+       "title": "Contain at the network edge — block the external IP",
+       "desc": "Blocking the C2 destination is enough; the host itself can keep running.",
+       "correct": false,
+       "explanation": "Blocking the external IP cuts the channel but leaves a rooted host on your network — it can still pivot, plant backdoors, or return via another IP. The host, not just the destination, must be contained.\n",
+       "ref": "Lecture 4 — containment depth"
+      }
+     ]
+    },
+    {
+     "id": "b4",
+     "title": "The Miner",
+     "threat": "MEDIUM",
+     "body": "Multiple alerts: an internal workstation is at <b>100% CPU for 12 hours<\/b>, and DNS shows repeated queries to <code>pool.supportxmr.com<\/code>. The user says the machine 'is just slow'. What's the call?\n",
+     "actions": [
+      {
+       "title": "True positive — isolate the host, find the payload source",
+       "desc": "Disconnect the machine, snapshot it, identify how the miner was delivered (drive-by download, malicious installer, etc.).",
+       "correct": true,
+       "explanation": "Mining-pool DNS + sustained 100% CPU is a confirmed crypto miner. It's medium severity (revenue loss, not data loss) but the host must be isolated and the delivery vector traced. Your Crypto Mining lab covers exactly this.\n",
+       "ref": "Lecture 4 / Lecture 3 — Crypto Mining lab"
+      },
+      {
+       "title": "False positive — the user is running heavy software",
+       "desc": "100% CPU could be a rendering job or a game; mining-pool DNS is coincidental.",
+       "correct": false,
+       "explanation": "Mining-pool domains are not coincidental DNS — they're exclusively used by miners. A user's 'it's just slow' is not evidence against a confirmed signal.\n",
+       "ref": "Lecture 3 — Statistical SPL & anomaly detection"
+      },
+      {
+       "title": "Low priority — it's not data theft, so defer 24 hours",
+       "desc": "Miners don't steal data; deprioritize until the queue clears.",
+       "correct": false,
+       "explanation": "A miner is often the tip of the iceberg — the same infection vector (drive-by, supply chain) could deliver worse payloads next. And mining burns compute for attackers. Deferring 'because it's only a miner' is a known blind spot.\n",
+       "ref": "Lecture 4 — severity vs impact"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cloud",
+   "title": "Cloud & Data",
+   "icon": "☁️",
+   "desc": "Key leaks, exposed storage, GuardDuty, exfiltration",
+   "scenarios": [
+    {
+     "id": "c1",
+     "title": "The Leaked Key",
+     "threat": "CRITICAL",
+     "body": "A GitHub secret-scanning alert hits your SOC: an <b>AWS access key<\/b> was committed to a public repository 6 days ago. CloudTrail shows the key made <b>412 API calls<\/b>, including <code>s3:GetObject<\/code> on a production bucket. What's the call?\n",
+     "actions": [
+      {
+       "title": "True positive — rotate the key now, audit the API calls",
+       "desc": "Immediately deactivate/rotate the key, review CloudTrail for the 412 calls, and check what was read from the bucket.",
+       "correct": true,
+       "explanation": "A publicly exposed key with active API usage — including reads on production data — is a live credential compromise. Rotate first, audit second, and treat anything the key read as potentially exposed. Your AWS Key Leak lab is this scenario.\n",
+       "ref": "Lecture 7 — AWS Key Leak & Cloud Compromise lab"
+      },
+      {
+       "title": "False positive — the key was already rotated last month",
+       "desc": "Check whether the leaked key is still active before raising a fuss.",
+       "correct": false,
+       "explanation": "You already have the evidence it IS active: 412 API calls in the last 6 days. 'Is it active?' was answered by CloudTrail. Rotate and audit — no further confirmation needed.\n",
+       "ref": "Lecture 7 — evidence-first triage"
+      },
+      {
+       "title": "Delete the GitHub repository to stop the exposure",
+       "desc": "Removing the public repo eliminates the leak source immediately.",
+       "correct": false,
+       "explanation": "Deleting the repo stops future scraping but does nothing about the 412 calls already made. The key must be rotated — that's the only action that actually revokes attacker access.\n",
+       "ref": "Lecture 7 — secret lifecycle"
+      }
+     ]
+    },
+    {
+     "id": "c2",
+     "title": "The Open Bucket",
+     "threat": "HIGH",
+     "body": "Your vulnerability scan reports an <b>S3 bucket marked public<\/b> containing customer PII backups (3.2 GB). The bucket has been public for 47 days. What's the call?\n",
+     "actions": [
+      {
+       "title": "True positive — restrict the bucket, then assess exposure",
+       "desc": "Remove public access, review the access logs (if any) for external reads, and determine breach-notification obligations.",
+       "correct": true,
+       "explanation": "A public bucket with PII is a data-exposure incident. Fix the configuration first, then quantify exposure from access logs and feed the result into your notification/compliance process (PDPA in Singapore).\n",
+       "ref": "Lecture 4 — data exposure handling"
+      },
+      {
+       "title": "False positive — no evidence anyone found the bucket",
+       "desc": "Security through obscurity: without proof of access, it's just a misconfiguration, not an incident.",
+       "correct": false,
+       "explanation": "Public buckets are actively scanned by bots within hours of going public. 47 days of public exposure without logs is not 'no access' — it's 'no visibility'. Treat as exposed until proven otherwise.\n",
+       "ref": "Lecture 4 — internet exposure reality"
+      },
+      {
+       "title": "Escalate as a confirmed breach with regulator notification",
+       "desc": "Public PII means a breach; notify the regulator today.",
+       "correct": false,
+       "explanation": "Restrict first, quantify second, notify third — the notification decision depends on evidence of actual access and the harm assessment. Declaring a regulator notification without the exposure analysis is premature.\n",
+       "ref": "Lecture 4 — notification sequencing"
+      }
+     ]
+    },
+    {
+     "id": "c3",
+     "title": "The GuardDuty Finding",
+     "threat": "HIGH",
+     "body": "AWS GuardDuty reports <code>UnauthorizedAccess:EC2/CryptoCurrency:MoneyB<\/code> on a <b>production web instance<\/b>. The instance is behind an autoscaling group that will recreate it if terminated. What's the call?\n",
+     "actions": [
+      {
+       "title": "True positive — isolate the instance, block its egress",
+       "desc": "Detach from the autoscaling group / apply a deny security group, preserve a snapshot, and block the mining destination.",
+       "correct": true,
+       "explanation": "GuardDuty's crypto-mining finding on a production instance needs isolation that survives autoscaling — detach it or deny its traffic, snapshot for evidence, then find the foothold. Terminating it outright would destroy evidence and it would respawn.\n",
+       "ref": "Lecture 4 — cloud containment mechanics"
+      },
+      {
+       "title": "False positive — GuardDuty often flags dev workloads",
+       "desc": "Crypto findings on dev/test instances are common false positives; verify before acting.",
+       "correct": false,
+       "explanation": "Even if this were a dev box, the finding means the instance is running unauthorized mining — that's compromise, not noise. The environment label doesn't change the verdict.\n",
+       "ref": "Lecture 4 — finding confidence levels"
+      },
+      {
+       "title": "Terminate the instance immediately",
+       "desc": "Kill the compromised instance; autoscaling will replace it with a clean one.",
+       "correct": false,
+       "explanation": "Termination destroys the forensic evidence (memory, disk) and — because of autoscaling — the replacement can be re-compromised via the same vector. Contain, snapshot, investigate, then remediate the root cause.\n",
+       "ref": "Lecture 4 — preserve-then-remediate"
+      }
+     ]
+    },
+    {
+     "id": "c4",
+     "title": "The Big Send",
+     "threat": "CRITICAL",
+     "body": "NetFlow shows your file server pushing <b>58 GB outbound in 90 minutes<\/b> to a cloud storage provider you don't use. The server has no scheduled backups to that destination. What's the call?\n",
+     "actions": [
+      {
+       "title": "True positive — disconnect the server, preserve evidence",
+       "desc": "Cut the server's network access, snapshot disk and memory, and correlate the exfiltration window with authentication events.",
+       "correct": true,
+       "explanation": "Large, unusual outbound transfer to an unknown destination is data exfiltration until proven otherwise. Disconnect (not just block the IP — the attacker may pivot), preserve, and correlate with auth logs to find the access path.\n",
+       "ref": "Lecture 4 — exfiltration detection & containment"
+      },
+      {
+       "title": "False positive — someone's personal cloud sync client",
+       "desc": "A user may have installed Dropbox/OneDrive and triggered a large sync.",
+       "correct": false,
+       "explanation": "A file SERVER with 58 GB outbound is not a user's personal sync — and even a rogue sync client on a server is an incident (data leaving via unauthorized tooling). Verify the source process, but contain the traffic now.\n",
+       "ref": "Lecture 4 — legitimate tools, illegitimate use"
+      },
+      {
+       "title": "Block the destination IP and close the case",
+       "desc": "Cutting the exfiltration channel ends the data loss.",
+       "correct": false,
+       "explanation": "Blocking the destination stops THIS channel but leaves the access path open — the attacker will pick a new destination. The server, and the credential/backdoor used, are the actual targets.\n",
+       "ref": "Lecture 4 — channel vs access path"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+};
+</script>
+<script src="config.js"></script>
+<script src="sync.js"></script>
+<script>
+/* Sync integration shim — registration + score push via PACE.sync.
+   Loaded AFTER config.js + sync.js, BEFORE the mechanics script.
+   Degrades gracefully: with no backend (offline / file://), sync is
+   undefined and the game plays fully local — nothing here may throw. */
+(function () {
+  "use strict";
+  var sync = window.PACE && window.PACE.sync;
+
+  function esc(s) { var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+  function teamName() { return sync ? sync.getProfile().teamName : "Group 0"; }
+
+  // Score push — called by mechanics on scored events. Never throws.
+  function push(scoreDelta, solvedId, accuracy) {
+    if (!sync || !sync.ENDPOINT) return;
+    var solved;
+    if (solvedId) { solved = {}; solved[solvedId] = true; }
+    // GAME_DATA is a `const` (global lexical binding) — NOT window.GAME_DATA
+    var title = (typeof GAME_DATA !== "undefined" && GAME_DATA && GAME_DATA.title) || "game";
+    sync.reportTeam({
+      scoreDelta: scoreDelta || 0,
+      solved: solved,
+      accuracy: accuracy,
+      game: title
+    }).catch(function () { /* sync failure must never break gameplay */ });
+  }
+
+  function playerName() {
+    if (!sync) return "";
+    return sync.getProfile().playerName || "anonymous";
+  }
+
+  function refreshTeam() {
+    var el = document.getElementById("teamName");
+    if (el) el.textContent = teamName();
+    var pe = document.getElementById("teamPlayer");
+    if (pe) pe.textContent = playerName();
+  }
+
+  // ⚙ gear button — re-open registration anytime (late joiners / team change)
+  function gearBtn() {
+    var b = document.createElement("button");
+    b.id = "teamGear";
+    b.textContent = "⚙";
+    b.title = "Change team";
+    b.setAttribute("aria-label", "Change team");
+    b.style.cssText = "position:fixed;top:12px;right:12px;z-index:9997;width:38px;height:38px;border-radius:50%;border:1px solid #243140;background:#182230;color:#d7e2ec;font-size:18px;cursor:pointer";
+    b.onclick = function () { if (sync) sync.registerModal({ onRegister: refreshTeam }); };
+    document.body.appendChild(b);
+  }
+
+  // Team indicator in the score bar (team + player name)
+  function teamStat() {
+    var sb = document.querySelector(".scoreBar");
+    if (!sb || !sync) return;
+    var d = document.createElement("div");
+    d.className = "stat";
+    d.id = "teamStat";
+    d.innerHTML = '<div class="label">Team</div>' +
+      '<div class="value" id="teamName" style="font-size:12px">' + esc(teamName()) + "</div>" +
+      '<div style="font-size:10px;color:#7d8ea3;text-align:center" id="teamPlayer">' + esc(playerName()) + "</div>";
+    sb.appendChild(d);
+  }
+
+  // Zero-friction registration on load (default Group 0, one click to start).
+  if (sync) sync.registerModal({ onRegister: refreshTeam });
+  gearBtn();
+  teamStat();
+
+  window.PACE = window.PACE || {};
+  window.PACE.gameSync = {
+    push: push,
+    teamName: teamName,
+    openRegister: function () { if (sync) sync.registerModal({ onRegister: refreshTeam }); },
+    refreshTeam: refreshTeam
+  };
+})();
+
+</script>
+<script>
+/* Multiple-choice decision game mechanics — generic. Reads GAME_DATA injected by
+   build_games.py. GAME_DATA shape: { title, subtitle, modules: [{id, title, icon,
+   desc, scenarios: [{id, title, threat, body, actions: [{title, desc, correct,
+   explanation, ref}]}]}] } */
+
+const state = {
+  module: 0,
+  index: 0,
+  picked: {},          // scenarioId -> picked action index
+  score: 0,
+  locked: false
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function currentModule() { return GAME_DATA.modules[state.module]; }
+function currentScenario() { return currentModule().scenarios[state.index]; }
+function totalScenarios() { return GAME_DATA.modules.reduce((n, m) => n + m.scenarios.length, 0); }
+function solvedCount() { return Object.keys(state.picked).length; }
+
+/* ============ rendering ============ */
+function renderHeader() {
+  $("scoreNum").textContent = state.score;
+  const done = solvedCount(), total = totalScenarios();
+  $("progressBar").style.width = (done / total * 100) + "%";
+  $("progressText").textContent = done + " / " + total + " decisions";
+}
+
+function renderChips() {
+  const box = $("chips");
+  box.innerHTML = "";
+  GAME_DATA.modules.forEach((mod, mi) => {
+    const lbl = document.createElement("span");
+    lbl.className = "chip tab-label module";
+    lbl.textContent = mod.icon + " " + mod.title.toUpperCase();
+    box.appendChild(lbl);
+    mod.scenarios.forEach((s, si) => {
+      const c = document.createElement("button");
+      c.className = "chip";
+      if (mi === state.module && si === state.index) c.classList.add("current");
+      if (state.picked[s.id] !== undefined) c.classList.add("done");
+      c.textContent = (mi + 1) + "." + (si + 1);
+      c.onclick = () => gotoScenario(mi, si);
+      box.appendChild(c);
+    });
+  });
+}
+
+function renderScenario() {
+  const s = currentScenario();
+  $("threatBadge").textContent = s.threat;
+  $("threatBadge").className = "roundBadge threat-" + s.threat;
+  $("roundTitle").textContent = s.title;
+  $("scenarioBody").innerHTML = s.body;
+  $("moduleLabel").textContent = currentModule().icon + " " + currentModule().title;
+  $("panelTitle").textContent = "Your call — " + s.title;
+
+  const box = $("actions");
+  box.innerHTML = "";
+  s.actions.forEach((a, i) => {
+    const btn = document.createElement("button");
+    btn.className = "action";
+    btn.id = "act" + i;
+    btn.innerHTML = '<div class="act-title">' + esc(a.title) + '</div>' +
+      (a.desc ? '<div class="act-desc">' + esc(a.desc) + "</div>" : "");
+    btn.onclick = () => pick(i);
+    box.appendChild(btn);
+  });
+
+  const fb = $("feedback");
+  fb.className = "feedback";
+  fb.innerHTML = "";
+  $("nextBtn").style.display = "none";
+  state.locked = false;
+
+  // restore already-picked scenarios (chip navigation can revisit them)
+  const prevPick = state.picked[s.id];
+  if (prevPick !== undefined) {
+    s.actions.forEach((a, bi) => {
+      const btn = document.getElementById("act" + bi);
+      btn.disabled = true;
+      if (a.correct === true) btn.classList.add("correct");
+      else if (bi === prevPick) btn.classList.add("wrong");
+    });
+    const prevAction = s.actions[prevPick];
+    fb.className = "feedback " + (prevAction.correct === true ? "ok" : "bad");
+    fb.innerHTML = (prevAction.correct === true
+        ? "<b>✅ Right call.</b> " + esc(prevAction.explanation)
+        : "<b>❌ Not the best call.</b> " + esc(prevAction.explanation)) +
+      (prevAction.ref ? '<div class="ref">📎 ' + esc(prevAction.ref) + "</div>" : "");
+    $("nextBtn").style.display = "inline-block";
+    state.locked = true;
+  }
+  renderChips();
+  renderHeader();
+}
+
+function gotoScenario(mi, si) {
+  state.module = mi;
+  state.index = si;
+  renderScenario();
+}
+
+/* ============ action ============ */
+function pick(i) {
+  if (state.locked) return;
+  const s = currentScenario();
+  if (state.picked[s.id] !== undefined) return; // already answered — no re-scoring
+  state.locked = true;
+  const a = s.actions[i];
+  const correct = a.correct === true;
+
+  state.picked[s.id] = i;
+  if (correct) state.score += 100;
+  // sync: push on every pick — points (or 0) + scenario marked + accuracy
+  if (window.PACE && window.PACE.gameSync) {
+    const attempted = Object.keys(state.picked).length;
+    window.PACE.gameSync.push(correct ? 100 : 0, s.id, (state.score / 100) / attempted);
+  }
+
+  // style all actions
+  document.querySelectorAll(".action").forEach((btn, bi) => {
+    btn.disabled = true;
+    const act = s.actions[bi];
+    if (act.correct === true) btn.classList.add("correct");
+    else if (bi === i) btn.classList.add("wrong");
+  });
+
+  const fb = $("feedback");
+  fb.className = "feedback " + (correct ? "ok" : "bad");
+  fb.innerHTML = (correct
+      ? "<b>✅ Right call.</b> " + esc(a.explanation)
+      : "<b>❌ Not the best call.</b> " + esc(a.explanation)) +
+    (a.ref ? '<div class="ref">📎 ' + esc(a.ref) + "</div>" : "");
+  $("nextBtn").style.display = "inline-block";
+  renderHeader();
+  renderChips();
+  if (solvedCount() === totalScenarios()) showFinish();
+}
+
+function nextScenario() {
+  const mod = currentModule();
+  if (state.index + 1 < mod.scenarios.length) {
+    state.index++;
+  } else if (state.module + 1 < GAME_DATA.modules.length) {
+    state.module++;
+    state.index = 0;
+  } else {
+    showFinish();
+    return;
+  }
+  renderScenario();
+}
+
+function showFinish() {
+  const total = totalScenarios(), done = solvedCount(), max = total * 100;
+  const pct = Math.round(state.score / max * 100);
+  let emoji = "🕵️", title = "Senior SOC Analyst";
+  if (pct >= 90) { emoji = "🏆"; title = "SOC Commander"; }
+  else if (pct >= 70) { emoji = "🕵️"; title = "Senior SOC Analyst"; }
+  else if (pct >= 50) { emoji = "🎯"; title = "Triage Analyst"; }
+  else { emoji = "📚"; title = "Keep Triage-ing"; }
+  $("finishEmoji").textContent = emoji;
+  $("finishTitle").textContent = title;
+  $("finishBody").innerHTML = "You triaged <b>" + done + " / " + total + "</b> alerts for <b>" +
+    state.score + " / " + max + "</b> points (" + pct + "%).<br><br>" +
+    (pct >= 90 ? "Textbook triage. Escalations would be trusted on the floor." :
+     pct >= 70 ? "Solid. Replay the ones you missed — read the explanations." :
+     "Every alert is a learning opportunity. Review the feedback and try again.");
+  $("overlay").classList.add("show");
+}
+
+function restartGame() {
+  state.module = 0; state.index = 0; state.picked = {}; state.score = 0; state.locked = false;
+  $("overlay").classList.remove("show");
+  renderScenario();
+}
+
+/* ============ wiring ============ */
+$("nextBtn").onclick = nextScenario;
+renderScenario();
+
+</script>
+</body>
+</html>

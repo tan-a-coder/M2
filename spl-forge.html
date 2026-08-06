@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPL Forge</title>
+<style>
+:root {
+  --bg: #0b0f14;
+  --panel: #111822;
+  --panel2: #0e141d;
+  --border: #1e2a3a;
+  --text: #d7e2ee;
+  --dim: #7d8ea3;
+  --cyan: #38e1ff;
+  --green: #3ddc84;
+  --amber: #ffb454;
+  --red: #ff5c6c;
+  --purple: #a78bfa;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+  padding: 24px 16px 40px;
+}
+.wrap { max-width: 980px; margin: 0 auto; }
+
+/* header */
+.hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.game-title {
+  font-size: 1.9rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+  background: linear-gradient(90deg, var(--cyan), var(--purple));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.subtitle { color: var(--dim); font-size: .85rem; margin-top: 6px; letter-spacing: .04em; }
+.scoreBar { display: flex; gap: 18px; align-items: center; }
+.stat { text-align: right; }
+.stat .label { font-size: .68rem; text-transform: uppercase; letter-spacing: .12em; color: var(--dim); }
+.stat .value { font-family: var(--mono); font-size: 1.35rem; font-weight: 700; }
+.stat .value.green { color: var(--green); }
+.progressWrap { width: 220px; }
+.progressBar { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.progressBar > div { height: 100%; width: 0%; background: linear-gradient(90deg, var(--cyan), var(--green)); transition: width .4s ease; }
+#progressText { font-size: .72rem; color: var(--dim); margin-top: 6px; font-family: var(--mono); }
+
+/* tabs */
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.tab {
+  padding: 9px 22px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--panel2); color: var(--dim); font-weight: 600; cursor: pointer;
+  font-size: .85rem; letter-spacing: .06em; text-transform: uppercase;
+}
+.tab.active { background: rgba(56,225,255,.12); border-color: var(--cyan); color: var(--cyan); }
+
+/* layout */
+.layout { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.card + .card { margin-top: 16px; }
+
+.sectionTitle { font-size: .72rem; text-transform: uppercase; letter-spacing: .14em; color: var(--dim); margin-bottom: 12px; }
+
+.roundBadge { display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .08em; padding: 3px 10px; border-radius: 99px; margin-bottom: 8px; }
+.threat-CRITICAL { background: rgba(255,92,108,.15); color: var(--red); }
+.threat-HIGH { background: rgba(255,180,84,.15); color: var(--amber); }
+.threat-MEDIUM { background: rgba(56,225,255,.12); color: var(--cyan); }
+.threat-LOW { background: rgba(61,220,132,.12); color: var(--green); }
+
+h2.roundTitle { font-size: 1.15rem; margin-bottom: 10px; }
+.scenario { font-size: .92rem; line-height: 1.55; color: #b9c8d8; }
+.scenario code, .codebox code { font-family: var(--mono); background: rgba(56,225,255,.08); color: var(--cyan); padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+.scenario b { color: var(--text); }
+
+.codebox {
+  font-family: var(--mono); font-size: .85rem; background: #0a0f16; border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px; color: var(--text); white-space: pre-wrap; word-break: break-all;
+  line-height: 1.6; min-height: 44px;
+}
+.codebox .slot { color: var(--amber); font-weight: 700; }
+.codebox .pipe { color: var(--purple); }
+.codebox.ok { border-color: var(--green); color: var(--green); }
+.codebox.bad { border-color: var(--red); }
+
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: .75rem; color: var(--dim); margin-bottom: 5px; }
+.field input {
+  width: 100%; background: #0a0f16; border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: var(--mono); font-size: .9rem; padding: 10px 12px; outline: none;
+}
+.field input:focus { border-color: var(--cyan); }
+
+.btnRow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.btn {
+  padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer;
+  font-weight: 700; font-size: .83rem; letter-spacing: .04em; background: var(--panel2); color: var(--text);
+  transition: all .15s ease;
+}
+.btn:hover { border-color: var(--cyan); }
+.btn.primary { background: var(--cyan); color: #04121a; border-color: var(--cyan); }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.ghost { color: var(--dim); }
+.btn.warn { color: var(--amber); border-color: rgba(255,180,84,.4); }
+.btn.bad { color: var(--red); border-color: rgba(255,92,108,.4); }
+
+/* multiple-choice actions */
+.actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.action {
+  text-align: left; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; cursor: pointer; transition: border-color .15s ease; color: var(--text);
+  font-family: inherit; font-size: .9rem;
+}
+.action:hover:not(:disabled) { border-color: var(--cyan); }
+.action .act-title { font-weight: 700; font-size: .93rem; }
+.action .act-desc { color: var(--dim); font-size: .8rem; margin-top: 4px; line-height: 1.45; }
+.action.correct { border-color: var(--green); background: rgba(61,220,132,.08); }
+.action.wrong { border-color: var(--red); background: rgba(255,92,108,.08); }
+.action:disabled { cursor: default; }
+
+.feedback { margin-top: 14px; border-radius: 10px; padding: 14px; font-size: .88rem; line-height: 1.55; display: none; border: 1px solid; }
+.feedback.ok { display: block; background: rgba(61,220,132,.08); border-color: var(--green); color: #b9eccd; }
+.feedback.bad { display: block; background: rgba(255,92,108,.08); border-color: var(--red); color: #f3c2c8; }
+.feedback .expected { margin-top: 8px; font-family: var(--mono); font-size: .8rem; background: rgba(0,0,0,.35); padding: 8px 10px; border-radius: 6px; }
+.feedback .ref { margin-top: 8px; font-size: .78rem; color: var(--dim); }
+
+/* round chips */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.chip {
+  font-family: var(--mono); font-size: .72rem; padding: 5px 12px; border-radius: 99px;
+  border: 1px solid var(--border); color: var(--dim); cursor: pointer; background: var(--panel2);
+}
+.chip:hover { border-color: var(--cyan); }
+.chip.current { border-color: var(--cyan); color: var(--cyan); }
+.chip.done { border-color: var(--green); color: var(--green); background: rgba(61,220,132,.08); }
+.chip.tab-label { cursor: default; color: var(--dim); border: none; font-family: inherit; letter-spacing: .1em; text-transform: uppercase; font-size: .68rem; padding: 6px 4px; }
+.chip.tab-label.module { color: var(--purple); }
+
+/* completion overlay */
+.overlay {
+  position: fixed; inset: 0; background: rgba(4,8,12,.92); display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px;
+}
+.overlay.show { display: flex; }
+.finish-card { max-width: 460px; text-align: center; }
+.finish-card .big { font-size: 3rem; margin-bottom: 10px; }
+.finish-card h2 { font-size: 1.6rem; margin-bottom: 8px; color: var(--cyan); letter-spacing: .06em; }
+.finish-card p { color: var(--dim); line-height: 1.6; margin-bottom: 18px; }
+.footer { margin-top: 26px; text-align: center; color: var(--dim); font-size: .75rem; letter-spacing: .08em; }
+.footer b { color: var(--cyan); }
+
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div>
+      <div class="game-title">SPL Forge</div>
+      <div class="subtitle">NTU PACE · AI-Powered SecOps · Build the Splunk query, not the payload</div>
+    </div>
+    <div class="scoreBar">
+      <div class="stat">
+        <div class="label">Score</div>
+        <div class="value green" id="scoreNum">0</div>
+      </div>
+      <div class="progressWrap">
+        <div class="progressBar"><div id="progressBar"></div></div>
+        <div id="progressText">0 / 0 rounds</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="layout">
+    <!-- left: scenario -->
+    <div>
+      <div class="card">
+        <div class="sectionTitle">Scenario</div>
+        <span class="roundBadge" id="threatBadge">MEDIUM</span>
+        <h2 class="roundTitle" id="roundTitle">—</h2>
+        <p class="scenario" id="scenarioBody">—</p>
+        <div style="margin-top:14px">
+          <div class="sectionTitle">Query Template</div>
+          <div class="codebox" id="templateBox"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="sectionTitle">Your Query</div>
+        <div class="codebox" id="finalBox"><span style="color:var(--dim)">Compose, then press Build…</span></div>
+      </div>
+    </div>
+
+    <!-- right: builder -->
+    <div>
+      <div class="card">
+        <div class="sectionTitle" id="panelTitle">Build the query</div>
+        <div class="field">
+          <label id="slot1Label">Slot 1</label>
+          <input type="text" id="input1" placeholder="—" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label id="slot2Label">Slot 2</label>
+          <input type="text" id="input2" placeholder="—" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="btnRow">
+          <button class="btn primary" id="buildBtn">Build</button>
+          <button class="btn" id="evalBtn">Evaluate</button>
+          <button class="btn warn" id="hintBtn">Hint</button>
+          <button class="btn bad" id="resetBtn">Reset</button>
+          <button class="btn ghost" id="nextBtn" style="display:none">Next round →</button>
+        </div>
+        <div class="feedback" id="feedback"></div>
+      </div>
+
+      <div class="chips" id="chips"></div>
+    </div>
+  </div>
+
+  <div class="footer">SPL FORGE · PACE Module 2 · content block is data-driven — swap this markdown to retheme the game</div>
+</div>
+
+<!-- completion overlay -->
+<div class="overlay" id="overlay">
+  <div class="card finish-card">
+    <div class="big" id="finishEmoji">⚒️</div>
+    <h2 id="finishTitle">Complete</h2>
+    <p id="finishBody">—</p>
+    <button class="btn primary" onclick="restartGame()">Play again</button>
+  </div>
+</div>
+
+<script>
+const GAME_DATA = {
+ "type": "slot-fill",
+ "title": "SPL Forge",
+ "subtitle": "NTU PACE · AI-Powered SecOps · Build the Splunk query, not the payload",
+ "footer": "SPL FORGE · PACE Module 2 · content block is data-driven — swap this markdown to retheme the game",
+ "tabs": [
+  {
+   "id": "search",
+   "label": "Search"
+  },
+  {
+   "id": "stats",
+   "label": "Stats & Eval"
+  }
+ ],
+ "rounds": [
+  {
+   "id": "r1",
+   "tab": "search",
+   "title": "The Login Flood",
+   "threat": "MEDIUM",
+   "body": "Overnight, <code>linux_secure<\/code> events show repeated \"Failed password\" lines. Before counting anything, you need the correct starting scope: which <b>index<\/b> holds the BOTSv3 dataset, and which <b>sourcetype<\/b> is the Linux SSH auth log?\n",
+   "template": "index=__1__ sourcetype=__2__",
+   "slot1": "Search index (dataset name)",
+   "slot2": "Sourcetype (SSH auth log)",
+   "expected": "index=botsv3 sourcetype=linux_secure",
+   "hint1": "The BOTSv3 dataset is pre-indexed under the dataset's name.",
+   "hint2": "Linux SSH auth events use the sourcetype that literally says 'secure'.",
+   "explanation": "index=… scopes the dataset; sourcetype=… scopes the log family. Together they cut 93 sourcetypes down to one — the cheapest possible filter.\n",
+   "concepts": [
+    "index",
+    "sourcetype",
+    "scoping"
+   ]
+  },
+  {
+   "id": "r2",
+   "tab": "search",
+   "title": "The Password Spray",
+   "threat": "HIGH",
+   "body": "Failed logins are spread across many source IPs. Count them per <b>source address<\/b>, filtering to actual failure events. Fill in the quoted search term and the stats grouping field.\n",
+   "template": "index=botsv3 sourcetype=linux_secure __1__ | stats count by __2__",
+   "slot1": "Failure search term (two words, quoted)",
+   "slot2": "Stats field — the attacker's IP",
+   "expected": "index=botsv3 sourcetype=linux_secure \"failed password\" | stats count by src_ip",
+   "hint1": "The failure message in sshd logs is the two words 'failed password'.",
+   "hint2": "The attacker's address in BOTSv3 is the standard src_ field.",
+   "explanation": "Quoting \"failed password\" makes it a literal phrase match. stats count by src_ip groups the failures so the spray source rises to the top.\n",
+   "concepts": [
+    "phrase search",
+    "stats count",
+    "grouping"
+   ]
+  },
+  {
+   "id": "r3",
+   "tab": "search",
+   "title": "The Port Scanner",
+   "threat": "MEDIUM",
+   "body": "Firewall logs suggest one host scanning many ports. Count <b>distinct destination ports<\/b> per source IP on the Cisco ASA sourcetype, keeping only hosts that touched more than 20.\n",
+   "template": "index=botsv3 sourcetype=__1__ | stats dc(__2__) by src_ip | where dc(__2__) > 20",
+   "slot1": "Sourcetype (firewall logs)",
+   "slot2": "Field to count distinctly (target port)",
+   "expected": "index=botsv3 sourcetype=cisco:asa | stats dc(dest_port) by src_ip | where dc(dest_port) > 20",
+   "hint1": "Cisco ASA events are sourcetype cisco:asa.",
+   "hint2": "The target port field is dest_…; dc() = distinct count.",
+   "explanation": "dc(dest_port) counts unique ports per source. The where clause then filters to genuine scanners — one host, many ports, in a single pipeline.\n",
+   "concepts": [
+    "dc()",
+    "where",
+    "pipeline"
+   ]
+  },
+  {
+   "id": "r4",
+   "tab": "search",
+   "title": "The Beacon",
+   "threat": "HIGH",
+   "body": "A host is phoning home: DNS stream logs show queries to a known-bad domain. Scope to DNS traffic and filter on the <b>query<\/b> field for <code>evil.example.com<\/code>.\n",
+   "template": "index=botsv3 sourcetype=__1__ query=__2__",
+   "slot1": "Sourcetype (DNS stream)",
+   "slot2": "Domain to hunt (as shown)",
+   "expected": "index=botsv3 sourcetype=stream:dns query=evil.example.com",
+   "hint1": "Stream-based DNS capture uses the stream:… family.",
+   "hint2": "Type the exact domain from the scenario.",
+   "explanation": "Field=value filters are the fastest hunt primitives. stream:dns + query=… isolates the beacon's lookups for timeline reconstruction.\n",
+   "concepts": [
+    "field=value",
+    "stream:dns",
+    "hunting"
+   ]
+  },
+  {
+   "id": "r5",
+   "tab": "stats",
+   "title": "Who Logged In?",
+   "threat": "LOW",
+   "body": "Successful SSH authentications need grouping per user, ranked most-active first. Complete the stats command and the descending sort.\n",
+   "template": "index=botsv3 sourcetype=linux_secure Accepted | stats __1__ | __2__",
+   "slot1": "Stats grouping (count by user)",
+   "slot2": "Sort command, descending",
+   "expected": "index=botsv3 sourcetype=linux_secure Accepted | stats count by user | sort -count",
+   "hint1": "Group with count by <field>.",
+   "hint2": "sort -field sorts descending in SPL.",
+   "explanation": "\"Accepted\" matches successful auths. stats count by user builds the roster; sort -count puts the most-active account on top for review.\n",
+   "concepts": [
+    "sort",
+    "Accepted",
+    "ranking"
+   ]
+  },
+  {
+   "id": "r6",
+   "tab": "stats",
+   "title": "The Traffic Spike",
+   "threat": "MEDIUM",
+   "body": "TCP stream volume jumped at 03:00. Produce a <b>time-series<\/b> of event counts per source IP so you can see when the spike started.\n",
+   "template": "index=botsv3 sourcetype=stream:tcp | __1__ by __2__",
+   "slot1": "Stats command (time series)",
+   "slot2": "Field to break down by (source IP)",
+   "expected": "index=botsv3 sourcetype=stream:tcp | timechart count by src_ip",
+   "hint1": "The time-series stats command starts with 'time…'.",
+   "hint2": "Break the chart down by the standard source-address field.",
+   "explanation": "timechart bins events into time buckets automatically. Splitting by src_ip reveals which host drove the 03:00 spike.\n",
+   "concepts": [
+    "timechart",
+    "time series",
+    "bucketing"
+   ]
+  },
+  {
+   "id": "r7",
+   "tab": "stats",
+   "title": "Severity Escalation",
+   "threat": "MEDIUM",
+   "body": "Tag each source IP as critical when its failure count exceeds 100, else info. Create a new field with an <b>eval<\/b> assignment: <code>severity=if(count>100,\"critical\",\"info\")<\/code>.\n",
+   "template": "index=botsv3 sourcetype=linux_secure | stats count by src_ip | eval __1__=__2__",
+   "slot1": "New field name",
+   "slot2": "if() expression (as shown)",
+   "expected": "index=botsv3 sourcetype=linux_secure | stats count by src_ip | eval severity=if(count>100,\"critical\",\"info\")",
+   "hint1": "eval creates fields as field=value.",
+   "hint2": "Copy the conditional exactly: if(count>100,…).",
+   "explanation": "eval adds computed fields mid-pipeline. The if() maps each IP to a severity, ready for a follow-up where severity=critical or a lookup.\n",
+   "concepts": [
+    "eval",
+    "if()",
+    "derived fields"
+   ]
+  },
+  {
+   "id": "r8",
+   "tab": "stats",
+   "title": "The Field Report",
+   "threat": "LOW",
+   "body": "Your incident note needs a clean column view of the key fields. Output a <b>table<\/b> with time, source IP, user and destination.\n",
+   "template": "index=botsv3 sourcetype=linux_secure | __1__ __2__",
+   "slot1": "Output command",
+   "slot2": "Fields, comma-separated",
+   "expected": "index=botsv3 sourcetype=linux_secure | table _time,src_ip,user,dest",
+   "hint1": "The tabular output command is a four-letter word.",
+   "hint2": "Use the fields _time, src_ip, user, dest — comma-separated.",
+   "explanation": "table trims events to the listed columns — the smallest readable artifact for a ticket or report.\n",
+   "concepts": [
+    "table",
+    "output",
+    "reporting"
+   ]
+  }
+ ]
+};
+</script>
+<script src="config.js"></script>
+<script src="sync.js"></script>
+<script>
+/* Sync integration shim — registration + score push via PACE.sync.
+   Loaded AFTER config.js + sync.js, BEFORE the mechanics script.
+   Degrades gracefully: with no backend (offline / file://), sync is
+   undefined and the game plays fully local — nothing here may throw. */
+(function () {
+  "use strict";
+  var sync = window.PACE && window.PACE.sync;
+
+  function esc(s) { var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+  function teamName() { return sync ? sync.getProfile().teamName : "Group 0"; }
+
+  // Score push — called by mechanics on scored events. Never throws.
+  function push(scoreDelta, solvedId, accuracy) {
+    if (!sync || !sync.ENDPOINT) return;
+    var solved;
+    if (solvedId) { solved = {}; solved[solvedId] = true; }
+    // GAME_DATA is a `const` (global lexical binding) — NOT window.GAME_DATA
+    var title = (typeof GAME_DATA !== "undefined" && GAME_DATA && GAME_DATA.title) || "game";
+    sync.reportTeam({
+      scoreDelta: scoreDelta || 0,
+      solved: solved,
+      accuracy: accuracy,
+      game: title
+    }).catch(function () { /* sync failure must never break gameplay */ });
+  }
+
+  function playerName() {
+    if (!sync) return "";
+    return sync.getProfile().playerName || "anonymous";
+  }
+
+  function refreshTeam() {
+    var el = document.getElementById("teamName");
+    if (el) el.textContent = teamName();
+    var pe = document.getElementById("teamPlayer");
+    if (pe) pe.textContent = playerName();
+  }
+
+  // ⚙ gear button — re-open registration anytime (late joiners / team change)
+  function gearBtn() {
+    var b = document.createElement("button");
+    b.id = "teamGear";
+    b.textContent = "⚙";
+    b.title = "Change team";
+    b.setAttribute("aria-label", "Change team");
+    b.style.cssText = "position:fixed;top:12px;right:12px;z-index:9997;width:38px;height:38px;border-radius:50%;border:1px solid #243140;background:#182230;color:#d7e2ec;font-size:18px;cursor:pointer";
+    b.onclick = function () { if (sync) sync.registerModal({ onRegister: refreshTeam }); };
+    document.body.appendChild(b);
+  }
+
+  // Team indicator in the score bar (team + player name)
+  function teamStat() {
+    var sb = document.querySelector(".scoreBar");
+    if (!sb || !sync) return;
+    var d = document.createElement("div");
+    d.className = "stat";
+    d.id = "teamStat";
+    d.innerHTML = '<div class="label">Team</div>' +
+      '<div class="value" id="teamName" style="font-size:12px">' + esc(teamName()) + "</div>" +
+      '<div style="font-size:10px;color:#7d8ea3;text-align:center" id="teamPlayer">' + esc(playerName()) + "</div>";
+    sb.appendChild(d);
+  }
+
+  // Zero-friction registration on load (default Group 0, one click to start).
+  if (sync) sync.registerModal({ onRegister: refreshTeam });
+  gearBtn();
+  teamStat();
+
+  window.PACE = window.PACE || {};
+  window.PACE.gameSync = {
+    push: push,
+    teamName: teamName,
+    openRegister: function () { if (sync) sync.registerModal({ onRegister: refreshTeam }); },
+    refreshTeam: refreshTeam
+  };
+})();
+
+</script>
+<script>
+/* Slot-fill game mechanics — generic. Reads GAME_DATA injected by build_games.py.
+   GAME_DATA shape: { title, subtitle, tabs: [{id,label}], rounds: [{id, tab, title,
+   threat, body, template, slot1, slot2, expected, hint1, hint2, explanation, concepts}] } */
+
+const state = {
+  tab: GAME_DATA.tabs[0].id,
+  index: 0,
+  solved: {},          // roundId -> true
+  attempts: {},        // roundId -> attempt count (score only on first try)
+  score: 0,
+  built: false
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function normalize(s) {
+  return String(s || "").toLowerCase().replace(/["']/g, "").replace(/\s+/g, "");
+}
+function roundsFor(tab) { return GAME_DATA.rounds.filter(r => r.tab === tab); }
+function currentRound() { return roundsFor(state.tab)[state.index]; }
+function totalRounds() { return GAME_DATA.rounds.length; }
+function solvedCount() { return Object.keys(state.solved).length; }
+
+/* ============ rendering ============ */
+function renderHeader() {
+  $("scoreNum").textContent = state.score;
+  const done = solvedCount(), total = totalRounds();
+  $("progressBar").style.width = (done / total * 100) + "%";
+  $("progressText").textContent = done + " / " + total + " rounds";
+}
+
+function renderChips() {
+  const box = $("chips");
+  box.innerHTML = "";
+  for (const tab of GAME_DATA.tabs) {
+    const lbl = document.createElement("span");
+    lbl.className = "chip tab-label";
+    lbl.textContent = tab.label.toUpperCase();
+    box.appendChild(lbl);
+    roundsFor(tab.id).forEach((r, i) => {
+      const c = document.createElement("button");
+      c.className = "chip";
+      if (r.id === currentRound().id) c.classList.add("current");
+      if (state.solved[r.id]) c.classList.add("done");
+      c.textContent = "R" + (i + 1);
+      c.onclick = () => { switchTab(tab.id); gotoRound(i); };
+      box.appendChild(c);
+    });
+  }
+}
+
+function renderTemplate() {
+  const r = currentRound();
+  const html = esc(r.template)
+    .replace(/__1__/g, '<span class="slot">[slot 1]</span>')
+    .replace(/__2__/g, '<span class="slot">[slot 2]</span>')
+    .replace(/\|/g, '<span class="pipe">|</span>');
+  $("templateBox").innerHTML = html;
+}
+
+function renderRound() {
+  const r = currentRound();
+  $("threatBadge").textContent = r.threat;
+  $("threatBadge").className = "roundBadge threat-" + r.threat;
+  $("roundTitle").textContent = r.title;
+  $("scenarioBody").innerHTML = r.body;
+  $("panelTitle").textContent = "Build the query — " + r.title;
+  $("slot1Label").textContent = r.slot1;
+  $("slot2Label").textContent = r.slot2;
+  $("input1").placeholder = r.slot1;
+  $("input2").placeholder = r.slot2;
+  $("input1").value = "";
+  $("input2").value = "";
+  $("finalBox").innerHTML = '<span style="color:var(--dim)">Compose, then press Build…</span>';
+  $("finalBox").classList.remove("ok", "bad");
+  $("feedback").className = "feedback";
+  $("nextBtn").style.display = "none";
+  $("evalBtn").disabled = false;
+  state.built = false;
+  renderTemplate();
+  renderChips();
+  renderHeader();
+}
+
+function switchTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.id === "tab" + tab));
+  state.index = 0;
+  renderRound();
+}
+
+function gotoRound(i) {
+  state.index = i;
+  renderRound();
+}
+
+/* ============ actions ============ */
+function build() {
+  const r = currentRound();
+  const v1 = $("input1").value, v2 = $("input2").value;
+  const filled = esc(r.template)
+    .replace(/__1__/g, esc(v1) || '<span class="slot">?</span>')
+    .replace(/__2__/g, esc(v2) || '<span class="slot">?</span>')
+    .replace(/\|/g, '<span class="pipe">|</span>');
+  $("finalBox").innerHTML = filled || '<span style="color:var(--dim)">(empty)</span>';
+  state.built = true;
+}
+
+function evaluate() {
+  const r = currentRound();
+  if (!state.built) build();
+  const v1 = $("input1").value.trim(), v2 = $("input2").value.trim();
+  const fb = $("feedback");
+  if (!v1 || !v2) {
+    fb.className = "feedback bad";
+    fb.innerHTML = "<b>Both slots are empty.</b> Build the query first, then evaluate.";
+    return;
+  }
+  const composed = r.template.replace(/__1__/g, v1).replace(/__2__/g, v2);
+  const ok = normalize(composed) === normalize(r.expected);
+  if (ok) {
+    const firstTry = !(r.id in state.attempts);
+    state.attempts[r.id] = (state.attempts[r.id] || 0) + 1;
+    if (!state.solved[r.id]) {
+      state.solved[r.id] = true;
+      if (firstTry) state.score += 100;
+      else state.score += 50;
+      // sync: push on first solve — points + solved round + running accuracy
+      if (window.PACE && window.PACE.gameSync) {
+        const firstTrySolved = Object.keys(state.solved).filter(id => state.attempts[id] === 1).length;
+        window.PACE.gameSync.push(firstTry ? 100 : 50, r.id, firstTrySolved / solvedCount());
+      }
+    }
+    fb.className = "feedback ok";
+    fb.innerHTML = "<b>✅ Correct.</b> " + esc(r.explanation) +
+      '<div class="expected">' + esc(r.expected) + "</div>";
+    $("finalBox").classList.add("ok");
+    $("nextBtn").style.display = "inline-block";
+    $("evalBtn").disabled = true;
+    renderHeader();
+    renderChips();
+    if (solvedCount() === totalRounds()) showFinish();
+  } else {
+    state.attempts[r.id] = (state.attempts[r.id] || 0) + 1;
+    fb.className = "feedback bad";
+    fb.innerHTML = "<b>❌ Not yet.</b> Check your slots — compare with the template and the hints.<div class='expected'>Expected: " +
+      esc(r.expected) + "</div>";
+    $("finalBox").classList.add("bad");
+  }
+}
+
+function showHint() {
+  const r = currentRound();
+  const fb = $("feedback");
+  fb.className = "feedback ok";
+  fb.innerHTML = "<b>💡 Hints</b><br>1. " + esc(r.hint1) + "<br>2. " + esc(r.hint2);
+}
+
+function resetRound() {
+  $("input1").value = "";
+  $("input2").value = "";
+  $("finalBox").innerHTML = '<span style="color:var(--dim)">Compose, then press Build…</span>';
+  $("finalBox").classList.remove("ok", "bad");
+  $("feedback").className = "feedback";
+  state.built = false;
+}
+
+function nextRound() {
+  const list = roundsFor(state.tab);
+  if (state.index + 1 < list.length) {
+    state.index++;
+  } else {
+    const nextTab = GAME_DATA.tabs.find(t => t.id !== state.tab);
+    if (nextTab && roundsFor(nextTab.id).some(r => !state.solved[r.id])) {
+      switchTab(nextTab.id);
+      return;
+    }
+    // jump to the first unsolved round anywhere before declaring done
+    for (const t of GAME_DATA.tabs) {
+      const i = roundsFor(t.id).findIndex(r => !state.solved[r.id]);
+      if (i !== -1) { switchTab(t.id); state.index = i; renderRound(); return; }
+    }
+    showFinish();
+    return;
+  }
+  renderRound();
+}
+
+function showFinish() {
+  const total = totalRounds(), done = solvedCount(), max = total * 100;
+  const pct = Math.round(state.score / max * 100);
+  let emoji = "🏆", title = "Forge Master";
+  if (pct >= 90) { emoji = "🏆"; title = "Forge Master"; }
+  else if (pct >= 70) { emoji = "🛡️"; title = "SOC Analyst"; }
+  else if (pct >= 50) { emoji = "🔧"; title = "Apprentice"; }
+  else { emoji = "📚"; title = "Keep Practising"; }
+  $("finishEmoji").textContent = emoji;
+  $("finishTitle").textContent = title;
+  $("finishBody").innerHTML = "You forged <b>" + done + " / " + total + "</b> queries for <b>" +
+    state.score + " / " + max + "</b> points (" + pct + "%).<br><br>" +
+    (pct >= 90 ? "Clean pipelines. The SOC would trust your searches." :
+     pct >= 70 ? "Solid. Review the failed rounds and re-forge them." :
+     "Rounds cost points on retry — read the hints and try again.");
+  $("overlay").classList.add("show");
+}
+
+function restartGame() {
+  state.solved = {}; state.attempts = {}; state.score = 0; state.index = 0;
+  state.tab = GAME_DATA.tabs[0].id;
+  document.querySelectorAll(".tab").forEach((t, i) => t.classList.toggle("active", i === 0));
+  $("overlay").classList.remove("show");
+  renderRound();
+}
+
+/* ============ wiring ============ */
+(function buildTabs() {
+  const box = $("tabs");
+  box.innerHTML = "";
+  GAME_DATA.tabs.forEach((t, i) => {
+    const b = document.createElement("button");
+    b.className = "tab" + (i === 0 ? " active" : "");
+    b.id = "tab" + t.id;
+    b.textContent = t.label;
+    b.onclick = () => switchTab(t.id);
+    box.appendChild(b);
+  });
+})();
+$("buildBtn").onclick = build;
+$("evalBtn").onclick = evaluate;
+$("hintBtn").onclick = showHint;
+$("resetBtn").onclick = resetRound;
+$("nextBtn").onclick = nextRound;
+$("input1").addEventListener("keydown", e => { if (e.key === "Enter") build(); });
+$("input2").addEventListener("keydown", e => { if (e.key === "Enter") evaluate(); });
+renderRound();
+
+</script>
+</body>
+</html>

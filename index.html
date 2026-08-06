@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PACE SecOps — Interactive Games</title>
+<style>
+  :root {
+    --bg: #0b0f14; --panel: #111822; --border: #1e2a3a;
+    --text: #d7e2ee; --dim: #7d8ea3;
+    --cyan: #38e1ff; --green: #3ddc84; --amber: #ffb454; --purple: #a78bfa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 40px 16px; display: flex; flex-direction: column; align-items: center;
+  }
+  .wrap { max-width: 760px; width: 100%; }
+  h1 {
+    font-size: 1.7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+    background: linear-gradient(90deg, var(--cyan), var(--purple));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    margin-bottom: 6px;
+  }
+  .sub { color: var(--dim); font-size: .88rem; margin-bottom: 28px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px; margin-bottom: 16px; display: block; text-decoration: none; color: var(--text);
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .card:hover { border-color: var(--cyan); transform: translateY(-2px); }
+  .card .icon { font-size: 1.6rem; }
+  .card h2 { font-size: 1.15rem; margin: 8px 0 6px; }
+  .card h2 span { color: var(--cyan); }
+  .card p { color: var(--dim); font-size: .86rem; line-height: 1.5; }
+  .card .meta { margin-top: 10px; font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--amber); }
+  .note {
+    border: 1px dashed var(--border); border-radius: 10px; padding: 12px 16px;
+    font-size: .8rem; color: var(--dim); line-height: 1.6; margin-top: 20px;
+  }
+  .note b { color: var(--text); }
+  .footer { margin-top: 30px; font-size: .72rem; color: var(--dim); letter-spacing: .08em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PACE SecOps — Interactive Games</h1>
+  <p class="sub">NTU PACE · Module 2 · AI-Powered SecOps — play in your browser, works on any device. No install.</p>
+
+  <a class="card" href="spl-forge.html">
+    <div class="icon">⚒️</div>
+    <h2><span>SPL Forge</span> — build the query</h2>
+    <p>8 rounds of Splunk query construction: index scoping, phrase search, stats, timechart, eval, table.
+    Play before/after Lecture 3 to arrive with query intuition.</p>
+    <div class="meta">8 rounds · offline · ~10 min</div>
+  </a>
+
+  <a class="card" href="triage-or-treat.html">
+    <div class="icon">🚨</div>
+    <h2><span>Triage or Treat</span> — make the call</h2>
+    <p>12 real alert scenarios across 3 modules (Authentication &amp; Access, Malware &amp; C2, Cloud &amp; Data).
+    True positive, false positive, or escalate — with explanations and lecture references.</p>
+    <div class="meta">12 decisions · 3 modules · ~15 min</div>
+  </a>
+
+  <div class="note">
+    <b>Tip:</b> pick your <b>team name</b> at the start (default Group 0) — every answer you score is
+    attributed to that team and shown on the live class leaderboard.
+    The games run entirely in your browser — no account, no install.
+  </div>
+
+  <div class="footer">PACE Module 2 · AI-Powered SecOps · interactive learning aids</div>
+</div>
+</body>
+</html>
