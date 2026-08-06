@@ -145,6 +145,7 @@
     heartbeat: heartbeat,
     registerModal: registerModal,
     slug: slug,
-    ENDPOINT: ENDPOINT
+    ENDPOINT: ENDPOINT,
+    ready: !!ENDPOINT
   };
 })();

@@ -595,8 +595,8 @@ const GAME_DATA = {
  ]
 };
 </script>
-<script src="config.js"></script>
-<script src="sync.js"></script>
+<script src="config.js?v=2"></script>
+<script src="sync.js?v=2"></script>
 <script>
 (function () {
   "use strict";
@@ -604,25 +604,32 @@ const GAME_DATA = {
 
   function esc(s) { var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
   function teamName() { return sync ? sync.getProfile().teamName : "Group 0"; }
+  function playerName() {
+    if (!sync) return "";
+    return sync.getProfile().playerName || "anonymous";
+  }
 
-  // Score push — called by mechanics on scored events. Never throws.
+  function setStatus(state) {
+    var el = document.getElementById("syncDot");
+    if (!el) return;
+    var map = { ok: ["✓", "#34d399"], fail: ["✗", "#f87171"], off: ["·", "#4a5a6a"] };
+    var v = map[state] || map.off;
+    el.textContent = v[0];
+    el.style.color = v[1];
+    el.title = "sync: " + state;
+  }
+
   function push(scoreDelta, solvedId, accuracy) {
-    if (!sync || !sync.ENDPOINT) return;
+    if (!sync || !sync.ready) { setStatus("off"); return; }
     var solved;
     if (solvedId) { solved = {}; solved[solvedId] = true; }
-    // GAME_DATA is a `const` (global lexical binding) — NOT window.GAME_DATA
     var title = (typeof GAME_DATA !== "undefined" && GAME_DATA && GAME_DATA.title) || "game";
     sync.reportTeam({
       scoreDelta: scoreDelta || 0,
       solved: solved,
       accuracy: accuracy,
       game: title
-    }).catch(function () { /* sync failure must never break gameplay */ });
-  }
-
-  function playerName() {
-    if (!sync) return "";
-    return sync.getProfile().playerName || "anonymous";
+    }).then(function () { setStatus("ok"); }).catch(function () { setStatus("fail"); });
   }
 
   function refreshTeam() {
@@ -632,7 +639,6 @@ const GAME_DATA = {
     if (pe) pe.textContent = playerName();
   }
 
-  // ⚙ gear button — re-open registration anytime (late joiners / team change)
   function gearBtn() {
     var b = document.createElement("button");
     b.id = "teamGear";
@@ -644,20 +650,20 @@ const GAME_DATA = {
     document.body.appendChild(b);
   }
 
-  // Team indicator in the score bar (team + player name)
   function teamStat() {
     var sb = document.querySelector(".scoreBar");
-    if (!sb || !sync) return;
+    if (!sb) return;
     var d = document.createElement("div");
     d.className = "stat";
     d.id = "teamStat";
     d.innerHTML = '<div class="label">Team</div>' +
-      '<div class="value" id="teamName" style="font-size:12px">' + esc(teamName()) + "</div>" +
+      '<div class="value" id="teamName" style="font-size:12px">' + esc(teamName()) +
+      ' <span id="syncDot" style="font-size:11px" title="sync: off">·</span></div>' +
       '<div style="font-size:10px;color:#7d8ea3;text-align:center" id="teamPlayer">' + esc(playerName()) + "</div>";
     sb.appendChild(d);
+    setStatus("off");
   }
 
-  // Zero-friction registration on load (default Group 0, one click to start).
   if (sync) sync.registerModal({ onRegister: refreshTeam });
   gearBtn();
   teamStat();
