@@ -409,10 +409,6 @@ const GAME_DATA = {
 <script src="config.js"></script>
 <script src="sync.js"></script>
 <script>
-/* Sync integration shim — registration + score push via PACE.sync.
-   Loaded AFTER config.js + sync.js, BEFORE the mechanics script.
-   Degrades gracefully: with no backend (offline / file://), sync is
-   undefined and the game plays fully local — nothing here may throw. */
 (function () {
   "use strict";
   var sync = window.PACE && window.PACE.sync;
@@ -488,10 +484,6 @@ const GAME_DATA = {
 
 </script>
 <script>
-/* Slot-fill game mechanics — generic. Reads GAME_DATA injected by build_games.py.
-   GAME_DATA shape: { title, subtitle, tabs: [{id,label}], rounds: [{id, tab, title,
-   threat, body, template, slot1, slot2, expected, hint1, hint2, explanation, concepts}] } */
-
 const state = {
   tab: GAME_DATA.tabs[0].id,
   index: 0,

@@ -1,23 +1,3 @@
-// ============================================================
-// sync.js — shared game-side sync module (vanilla JS, no deps)
-// ============================================================
-// Load AFTER config.js. Gives games:
-//   PACE.sync.getProfile()      -> {teamName, playerName, deviceId}
-//   PACE.sync.setProfile(p)     -> persist profile (localStorage)
-//   PACE.sync.reportTeam(state) -> read-modify-write team state to
-//                                  the Apps Script /exec paste-box
-//   PACE.sync.heartbeat()       -> mark online (called internally)
-//
-// Transport (Apps Script web app — keep requests SIMPLE, no custom
-// headers, text/plain bodies; Apps Script does not handle OPTIONS):
-//   GET  endpoint?action=board   -> all teams (merge base)
-//   POST endpoint?action=upsert  -> full team doc, text/plain JSON
-//   POST endpoint?action=heartbeat -> {teamKey, heartbeatTs}
-//
-// Team state schema (one row per team in the Sheet):
-//   { team, game, session, score, accuracy, lastActionTs,
-//     solved: {levelId: true}, history: [{ts, delta}], updatedBy }
-// ============================================================
 (function () {
   "use strict";
   var CFG = window.PACE_CONFIG || { pastebox: { endpoint: "" } };

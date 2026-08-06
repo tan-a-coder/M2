@@ -598,10 +598,6 @@ const GAME_DATA = {
 <script src="config.js"></script>
 <script src="sync.js"></script>
 <script>
-/* Sync integration shim — registration + score push via PACE.sync.
-   Loaded AFTER config.js + sync.js, BEFORE the mechanics script.
-   Degrades gracefully: with no backend (offline / file://), sync is
-   undefined and the game plays fully local — nothing here may throw. */
 (function () {
   "use strict";
   var sync = window.PACE && window.PACE.sync;
@@ -677,11 +673,6 @@ const GAME_DATA = {
 
 </script>
 <script>
-/* Multiple-choice decision game mechanics — generic. Reads GAME_DATA injected by
-   build_games.py. GAME_DATA shape: { title, subtitle, modules: [{id, title, icon,
-   desc, scenarios: [{id, title, threat, body, actions: [{title, desc, correct,
-   explanation, ref}]}]}] } */
-
 const state = {
   module: 0,
   index: 0,
