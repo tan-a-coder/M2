@@ -619,17 +619,23 @@ const GAME_DATA = {
     el.title = "sync: " + state;
   }
 
-  function push(scoreDelta, solvedId, accuracy) {
+  function push(scoreDelta, solvedId, accuracy, extra) {
     if (!sync || !sync.ready) { setStatus("off"); return; }
     var solved;
     if (solvedId) { solved = {}; solved[solvedId] = true; }
     var title = (typeof GAME_DATA !== "undefined" && GAME_DATA && GAME_DATA.title) || "game";
-    sync.reportTeam({
+    var patch = {
       scoreDelta: scoreDelta || 0,
       solved: solved,
       accuracy: accuracy,
       game: title
-    }).then(function () { setStatus("ok"); }).catch(function () { setStatus("fail"); });
+    };
+    // games that track their own totals push absolutes, so a lost push self-heals
+    if (extra) {
+      if (extra.stats) patch.stats = extra.stats;
+      if (extra.solvedAll) patch.solvedAll = extra.solvedAll;
+    }
+    sync.reportTeam(patch).then(function () { setStatus("ok"); }).catch(function () { setStatus("fail"); });
   }
 
   function refreshTeam() {
