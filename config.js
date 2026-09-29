@@ -3,7 +3,7 @@ window.PACE_CONFIG = {
     adapter: "apps-script",
     endpoint: "https://script.google.com/macros/s/AKfycbyIT1WKcWiMFhex_mmM8RLy8XvSt7vKsBjLyYct3xJIaMKu-SUqMVFO7wfdcGrniVtd/exec",
     session: "2026-08-06",
-    pollMs: 5000,          // dashboard auto-refresh
+    pollMs: 15000,          // dashboard auto-refresh
     timeoutMs: 15000
   },
   defaultTeams: ["Group 0", "Group 1", "Group 2", "Group 3", "Group 4",
