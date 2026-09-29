@@ -795,10 +795,11 @@ function pick(i) {
 
   state.picked[s.id] = i;
   if (correct) state.score += 100;
-  // sync: push on every pick — points (or 0) + scenario marked + accuracy
+  // sync: push on every pick — points (or 0) + a scenario counts as SOLVED only when it
+  // was answered correctly (a wrong pick must not read as solved on the board)
   if (window.PACE && window.PACE.gameSync) {
     const attempted = Object.keys(state.picked).length;
-    window.PACE.gameSync.push(correct ? 100 : 0, s.id, (state.score / 100) / attempted);
+    window.PACE.gameSync.push(correct ? 100 : 0, correct ? s.id : null, (state.score / 100) / attempted);
   }
 
   // style all actions
